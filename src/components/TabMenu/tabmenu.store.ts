@@ -1,147 +1,66 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
+import { findItem, removeItem } from '@/lib/utils'
 import { makeAutoObservable } from 'mobx'
 import { makePersistable } from 'mobx-persist-store'
+import { MOCK_TABLIST } from './tabmenu.mock'
+// import localforage from 'localforage';
 
-export const initialTabState = [
-	{
-		icon: 'GrAppsRounded',
-		title: 'Dashboard',
-		isPinned: false,
-		path: '/',
-		isSelected: true,
-	},
-	{
-		icon: 'CiBank',
-		title: 'Banking',
-		isPinned: true,
-		path: '/banking',
-	},
-	{
-		icon: 'FiPhoneCall',
-		title: 'Telefonie',
-		isPinned: false,
-		path: '/telephonie',
-	},
-	{
-		icon: 'FiUserPlus',
-		title: 'Accounting',
-		isPinned: true,
-		path: '/accounting',
-	},
-	{
-		icon: 'CiShop',
-		title: 'Verkauf',
-		isPinned: false,
-		path: '/verkauf',
-	},
-	{
-		icon: 'BsGraphUpArrow',
-		title: 'Statistik',
-		isPinned: false,
-		path: '/statistik',
-	},
-	{
-		icon: 'MdMailOutline',
-		title: 'Post Office',
-		isPinned: true,
-		path: '/post_office',
-	},
-	{
-		icon: 'HiOutlineCog',
-		title: 'Administration',
-		isPinned: false,
-		path: '/administration',
-	},
-	{
-		icon: 'IoBookOutline',
-		title: 'Help',
-		isPinned: false,
-		path: '/help',
-	},
-	{
-		icon: 'IoCubeOutline',
-		title: 'Warenbestand',
-		isPinned: false,
-		path: '/warenbestand',
-	},
-	{
-		icon: 'FaListUl',
-		title: 'Auswahllisten',
-		isPinned: false,
-		path: '/auswahllisten',
-	},
-	{
-		icon: 'BsCartCheck',
-		title: 'Einkauf',
-		isPinned: false,
-		path: '/einkauf',
-	},
-	{
-		icon: 'CgBrowser',
-		title: 'Rechn',
-		isPinned: false,
-		path: '/rechn',
-	},
-	{
-		icon: 'BsBox2Fill',
-		title: 'Lagerverwaltung',
-		isPinned: false,
-		path: '/lagerverwaltung',
-	},
-]
+type TMockTabItem = (typeof MOCK_TABLIST)[number]
 
-export type ITabItemType = {
-	icon: string
-	title: string
-	isPinned: boolean
-	path: string
-	isSelected?: boolean
+export type TTabItem = {
+	id: string
+	label: TMockTabItem['label']
+	icon: TMockTabItem['icon']
+	url: TMockTabItem['url']
 }
 
-export interface ITabMenuStore {
-	tabs: ITabItemType[]
-	pin: (_item: ITabItemType) => void
-	unpin: (_item: ITabItemType) => void
-	close: (_item: ITabItemType) => string | null
-	select: (_item: ITabItemType) => void
-	reinit: (_items: ITabItemType[]) => void
+export interface ITabStoreAbstraction {
+	unpinnedTabs: TTabItem[]
+	pinnedTabs: TTabItem[]
+	setPinnedTabs: (array: TTabItem[]) => void
+	setUnpinnedTabs: (array: TTabItem[]) => void
+	removeTab: (id: string, type: 'pinnedTabs' | 'unpinnedTabs') => void
+	handlePinTab: (id: string) => (action: 'pin' | 'unpin') => void
 }
 
-class TabMenuStore implements ITabMenuStore {
-	tabs: Array<ITabItemType> = initialTabState
+class TabStore implements ITabStoreAbstraction {
+	unpinnedTabs: TTabItem[] = []
+	pinnedTabs: TTabItem[] = []
 
 	constructor() {
 		makeAutoObservable(this)
+		if (this.unpinnedTabs.length === 0) {
+			this.unpinnedTabs = MOCK_TABLIST.map(f => f)
+		}
 		makePersistable(this, {
 			name: 'tabStore',
-			properties: ['tabs'],
-			storage: window.localStorage,
+			properties: ['pinnedTabs', 'unpinnedTabs'],
+			storage: window.localStorage, // localforate set
 		})
 	}
 
-	pin = (_item: ITabItemType): void => {}
-	unpin = (_item: ITabItemType): void => {}
-	close = (_item: ITabItemType): string | null => {
-		const tab = this.tabs.findIndex(f => f === _item)
-		const selectedTab = this.tabs[tab]
-		let returnValue = null
-		if (selectedTab.isSelected) {
-			this.tabs[0].isSelected
-			returnValue = this.tabs[0].path
-		}
-		this.tabs = this.tabs.filter(tab => tab !== _item)
-		return returnValue
+	setPinnedTabs = (array: TTabItem[]) => {
+		this.pinnedTabs = array
 	}
-	select = (_item: ITabItemType): void => {
-		const tab = this.tabs.findIndex(f => f === _item)
-		if (tab !== -1) {
-			this.tabs[tab].isSelected = true
-		}
+	setUnpinnedTabs = (array: TTabItem[]) => {
+		this.unpinnedTabs = array
 	}
-	reinit = (_items: ITabItemType[]): void => {
-		this.tabs = _items
+	removeTab(id: string, type: 'pinnedTabs' | 'unpinnedTabs') {
+		type === 'pinnedTabs'
+			? this.setPinnedTabs(removeItem(this.pinnedTabs, id))
+			: this.setUnpinnedTabs(removeItem(this.unpinnedTabs, id))
+	}
+	handlePinTab = (id: string) => (action: 'pin' | 'unpin') => {
+		if (action === 'pin') {
+			const tabToPin = findItem(this.unpinnedTabs, id)
+			tabToPin && this.setPinnedTabs([...this.pinnedTabs, tabToPin])
+			tabToPin && this.removeTab(id, 'unpinnedTabs')
+		} else if (action === 'unpin') {
+			const tabToUnpin = findItem(this.pinnedTabs, id)
+			tabToUnpin && this.setUnpinnedTabs([...this.unpinnedTabs, tabToUnpin])
+			tabToUnpin && this.removeTab(id, 'pinnedTabs')
+		}
 	}
 }
 
-const tabStore = new TabMenuStore()
+const tabStore = new TabStore()
 export { tabStore }

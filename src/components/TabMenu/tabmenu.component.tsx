@@ -1,19 +1,44 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { ComponentPropsWithoutRef } from 'react'
-import { cn } from '@/lib/utils'
-import sass from './tabmenu.module.scss'
-import { TabMenuItem } from './TabMenuItem/tabmenu_item.component'
+'use client'
 
-interface ITabMenuProps extends ComponentPropsWithoutRef<'ul'> {}
+import { DragDropContext, DropResult } from '@hello-pangea/dnd'
+import Stack from '@mui/material/Stack'
+import { tabStore } from './tabmenu.store'
+import { UnpinnedTabs } from './components/unpinnedTabs/unpinnedTabs.component'
+import { PinDropdown } from './components/pinMenu/pinMenu.component'
+import { PinnedTabs } from './components/pinnedTabs/pinnedTabs.component'
 
-function TabMenu({ className, children, ...props }: ITabMenuProps) {
+export const TabMenu = () => {
+	const onDragEnd = (result: DropResult) => {
+		const { source, destination, type } = result
+		if (!destination) return
+
+		const newOrder =
+			type === 'pinnedTabs'
+				? [...tabStore.pinnedTabs]
+				: [...tabStore.unpinnedTabs]
+		const [moved] = newOrder.splice(source.index, 1)
+		newOrder.splice(destination.index, 0, moved)
+		type === 'pinnedTabs'
+			? tabStore.setPinnedTabs(newOrder)
+			: tabStore.setUnpinnedTabs(newOrder)
+	}
+
 	return (
-		<ul className={cn(sass.tabmenu, className)} {...props}>
-			{children}
-		</ul>
+		<Stack
+			className='bg-light'
+			component='nav'
+			position='relative'
+			direction='row'
+			flexWrap='nowrap'
+			height='48px'
+			border={1}
+			borderColor='#f1f5f8'>
+			<DragDropContext onDragEnd={onDragEnd}>
+				<PinnedTabs />
+				<UnpinnedTabs />
+			</DragDropContext>
+
+			<PinDropdown />
+		</Stack>
 	)
 }
-
-TabMenu.Item = TabMenuItem
-export { TabMenu }
