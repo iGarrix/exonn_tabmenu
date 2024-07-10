@@ -6,16 +6,14 @@ import {
 } from 'react-router-dom'
 import { RootLayout } from './layouts/RootLayout'
 import NotFound from './pages/notFound'
-import MainPage from './pages/mainPage'
-import BankingPage from './pages/bankingPage'
 import DynamicPage from './pages/dynamicPage'
+import MainPage from './pages/mainPage'
 
 const router = createBrowserRouter(
 	createRoutesFromElements(
 		<>
 			<Route path='/' element={<RootLayout />}>
 				<Route index element={<MainPage />} />
-				<Route path='/banking' element={<BankingPage />} />
 				<Route path=':tab' element={<DynamicPage />} />
 			</Route>
 			<Route path='*' element={<NotFound />} />
